@@ -112,7 +112,7 @@ const DashboardCard = ({ dashboard, userHandle, onEdit, onDelete, onView }) => {
             Edit
           </NeonButton>
           <button
-            onClick={() => onDelete(dashboard.id)}
+            onClick={onDelete}
             className="rounded-full border border-pulse/50 px-3 py-1 text-xs text-pulse hover:bg-pulse/10"
           >
             Delete
@@ -124,47 +124,83 @@ const DashboardCard = ({ dashboard, userHandle, onEdit, onDelete, onView }) => {
 };
 
 /* ─────────────────────────────────────────────────────────── */
-/* Dashboard editor modal                                       */
+/* Dashboard editor modal with Template Selection               */
 /* ─────────────────────────────────────────────────────────── */
 const DashboardEditor = ({ dashboard, onClose, onSave }) => {
   const [form, setForm] = useState({
     title: dashboard?.title || "New Dashboard",
     slug: dashboard?.slug || "",
     visibility: dashboard?.visibility || "public",
-    layout: JSON.stringify(
-      dashboard?.layout || { sections: ["hero", "projects", "cta"] },
-      null,
-      2
-    ),
+    templateId: dashboard?.templateId || dashboard?.template?.id || "",
   });
+  const [templates, setTemplates] = useState([]);
+  const [loadingTemplates, setLoadingTemplates] = useState(true);
   const [saving, setSaving] = useState(false);
   const { notify } = useToast();
 
+  // Fetch available templates
+  useEffect(() => {
+    const loadTemplates = async () => {
+      try {
+        const data = await api.templates.list();
+        setTemplates(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error("Failed to load templates:", err);
+        setTemplates([]);
+      } finally {
+        setLoadingTemplates(false);
+      }
+    };
+    loadTemplates();
+  }, []);
+
   const handleSave = async () => {
+    if (!form.title.trim()) {
+      notify({ title: "Please enter a title" });
+      return;
+    }
+    if (!form.slug.trim()) {
+      notify({ title: "Please enter a URL slug" });
+      return;
+    }
+
     setSaving(true);
     try {
-      let layoutObj;
-      try {
-        layoutObj = JSON.parse(form.layout);
-      } catch {
-        notify({ title: "Invalid JSON in layout" });
-        setSaving(false);
-        return;
-      }
-
       const payload = {
         title: form.title,
-        slug: form.slug,
+        slug: form.slug.toLowerCase().replace(/[^a-z0-9-]/g, "-"),
         visibility: form.visibility,
-        layout: layoutObj,
       };
 
-      if (dashboard?.id) {
-        await api.dashboards.update(dashboard.id, payload);
+      let dashboardId = dashboard?.id;
+
+      if (dashboardId) {
+        // Update existing dashboard
+        await api.dashboards.update(dashboardId, payload);
       } else {
-        await api.dashboards.create(payload);
+        // Create new dashboard
+        const created = await api.dashboards.create(payload);
+        dashboardId = created?.id;
       }
 
+      // Apply template if selected
+      if (form.templateId && dashboardId) {
+        try {
+          await api.dashboards.setTemplate(dashboardId, form.templateId);
+          notify({
+            title: "Template applied! 🎨",
+            message: "Your dashboard styling has been updated",
+          });
+        } catch (err) {
+          console.error("Failed to apply template:", err);
+        }
+      }
+
+      notify({
+        title: dashboard?.id
+          ? "Dashboard updated! ✨"
+          : "Dashboard created! 🚀",
+      });
       onSave();
       onClose();
     } catch (err) {
@@ -174,22 +210,28 @@ const DashboardEditor = ({ dashboard, onClose, onSave }) => {
     }
   };
 
+  const selectedTemplate = templates.find((t) => t.id === form.templateId);
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-6">
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="w-full max-w-2xl space-y-4 rounded-3xl border border-white/10 bg-night p-6"
+        className="w-full max-w-2xl space-y-6 rounded-3xl border border-white/10 bg-night p-6"
       >
         <h2 className="text-xl font-semibold text-white">
           {dashboard?.id ? "Edit Dashboard" : "Create Dashboard"}
         </h2>
 
-        <div className="space-y-4">
+        <div className="space-y-5">
+          {/* Title */}
           <div>
-            <label className="text-sm text-white/70">Title</label>
+            <label className="mb-1 block text-sm text-white/70">
+              Dashboard Title *
+            </label>
             <input
-              className="mt-1 w-full rounded-2xl bg-white/5 px-4 py-3 text-white outline-none focus-visible:ring-2 focus-visible:ring-cyber"
+              className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none focus:border-cyber"
+              placeholder="My Portfolio"
               value={form.title}
               onChange={(e) =>
                 setForm((p) => ({ ...p, title: e.target.value }))
@@ -197,44 +239,122 @@ const DashboardEditor = ({ dashboard, onClose, onSave }) => {
             />
           </div>
 
+          {/* Slug */}
           <div>
-            <label className="text-sm text-white/70">Slug (URL path)</label>
-            <input
-              className="mt-1 w-full rounded-2xl bg-white/5 px-4 py-3 text-white outline-none"
-              placeholder="hire-me"
-              value={form.slug}
-              onChange={(e) => setForm((p) => ({ ...p, slug: e.target.value }))}
-            />
+            <label className="mb-1 block text-sm text-white/70">
+              URL Slug *
+            </label>
+            <div className="flex items-center gap-2">
+              <span className="text-white/40">/p/handle/</span>
+              <input
+                className="flex-1 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none focus:border-cyber"
+                placeholder="portfolio"
+                value={form.slug}
+                onChange={(e) =>
+                  setForm((p) => ({
+                    ...p,
+                    slug: e.target.value
+                      .toLowerCase()
+                      .replace(/[^a-z0-9-]/g, "-"),
+                  }))
+                }
+              />
+            </div>
           </div>
 
+          {/* Visibility */}
           <div>
-            <label className="text-sm text-white/70">Visibility</label>
-            <select
-              className="mt-1 w-full rounded-2xl bg-white/5 px-4 py-3 text-white"
-              value={form.visibility}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, visibility: e.target.value }))
-              }
-            >
-              <option value="public">Public</option>
-              <option value="unlisted">Unlisted</option>
-              <option value="private">Private</option>
-            </select>
+            <label className="mb-1 block text-sm text-white/70">
+              Visibility
+            </label>
+            <div className="flex gap-2">
+              {["public", "unlisted", "private", "draft"].map((v) => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => setForm((p) => ({ ...p, visibility: v }))}
+                  className={`rounded-xl px-4 py-2 text-sm capitalize transition ${
+                    form.visibility === v
+                      ? "bg-cyber text-night"
+                      : "border border-white/10 text-white/70 hover:bg-white/5"
+                  }`}
+                >
+                  {v}
+                </button>
+              ))}
+            </div>
           </div>
 
+          {/* Template Selection */}
           <div>
-            <label className="text-sm text-white/70">Layout (JSON)</label>
-            <textarea
-              className="mt-1 min-h-[160px] w-full rounded-2xl bg-white/5 p-4 font-mono text-xs text-white outline-none"
-              value={form.layout}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, layout: e.target.value }))
-              }
-            />
+            <label className="mb-2 block text-sm text-white/70">
+              Choose a Template
+              <span className="ml-2 text-xs text-white/40">
+                (defines colors & fonts)
+              </span>
+            </label>
+
+            {loadingTemplates ? (
+              <div className="flex items-center gap-2 py-4 text-white/50">
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+                  className="h-4 w-4 rounded-full border-2 border-cyber border-t-transparent"
+                />
+                <span className="text-sm">Loading templates...</span>
+              </div>
+            ) : templates.length > 0 ? (
+              <div className="grid grid-cols-2 gap-3">
+                {templates.map((template) => (
+                  <button
+                    key={template.id}
+                    type="button"
+                    onClick={() =>
+                      setForm((p) => ({ ...p, templateId: template.id }))
+                    }
+                    className={`relative overflow-hidden rounded-2xl border p-4 text-left transition ${
+                      form.templateId === template.id
+                        ? "border-cyber bg-cyber/10"
+                        : "border-white/10 bg-white/5 hover:border-white/20"
+                    }`}
+                  >
+                    {/* Template Preview Gradient */}
+                    <div
+                      className="mb-3 h-12 rounded-lg"
+                      style={{
+                        background: template.colorScheme?.primary
+                          ? `linear-gradient(135deg, ${
+                              template.colorScheme.primary
+                            }, ${
+                              template.colorScheme.secondary ||
+                              template.colorScheme.primary
+                            })`
+                          : "linear-gradient(135deg, #00ff88, #00bbff)",
+                      }}
+                    />
+                    <p className="font-medium text-white">{template.name}</p>
+                    <p className="mt-1 text-xs text-white/50 line-clamp-2">
+                      {template.description ||
+                        "A beautiful template for your dashboard"}
+                    </p>
+                    {form.templateId === template.id && (
+                      <div className="absolute right-2 top-2 rounded-full bg-cyber px-2 py-0.5 text-xs text-night">
+                        ✓ Selected
+                      </div>
+                    )}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-center text-white/50">
+                <p>No templates available</p>
+                <p className="mt-1 text-xs">Default styling will be applied</p>
+              </div>
+            )}
           </div>
         </div>
 
-        <div className="flex justify-end gap-3">
+        <div className="flex justify-end gap-3 pt-2">
           <button
             onClick={onClose}
             className="rounded-full border border-white/20 px-5 py-2 text-sm text-white/70 hover:bg-white/5"
@@ -242,7 +362,11 @@ const DashboardEditor = ({ dashboard, onClose, onSave }) => {
             Cancel
           </button>
           <NeonButton onClick={handleSave} disabled={saving}>
-            {saving ? "Saving..." : "Save Dashboard"}
+            {saving
+              ? "Saving..."
+              : dashboard?.id
+              ? "Update Dashboard"
+              : "Create Dashboard"}
           </NeonButton>
         </div>
       </motion.div>
@@ -351,6 +475,51 @@ const DashboardDetail = ({ dashboard, onClose }) => {
 };
 
 /* ─────────────────────────────────────────────────────────── */
+/* Delete Confirmation Modal                                    */
+/* ─────────────────────────────────────────────────────────── */
+const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, title }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="w-full max-w-md rounded-3xl border border-white/10 bg-night p-6 shadow-2xl"
+      >
+        <div className="mb-4 text-center">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-pulse/20 text-2xl">
+            ⚠️
+          </div>
+          <h3 className="text-lg font-semibold text-white">
+            Delete Dashboard?
+          </h3>
+          <p className="mt-2 text-white/60">
+            Are you sure you want to delete{" "}
+            <span className="font-medium text-white">"{title}"</span>? This will
+            permanently remove the dashboard and all its content.
+          </p>
+        </div>
+        <div className="flex gap-3">
+          <button
+            onClick={onClose}
+            className="flex-1 rounded-xl border border-white/20 py-3 text-sm text-white/70 transition hover:bg-white/5"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            className="flex-1 rounded-xl bg-pulse py-3 text-sm font-medium text-white transition hover:bg-pulse/80"
+          >
+            Delete Dashboard
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+};
+
+/* ─────────────────────────────────────────────────────────── */
 /* Main component                                               */
 /* ─────────────────────────────────────────────────────────── */
 const DashboardManager = () => {
@@ -359,6 +528,10 @@ const DashboardManager = () => {
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingDashboard, setEditingDashboard] = useState(null);
   const [viewingDashboard, setViewingDashboard] = useState(null);
+  const [deleteModal, setDeleteModal] = useState({
+    open: false,
+    dashboard: null,
+  });
   const setStoreDashboards = useAppStore((s) => s.setDashboards);
   const plan = useAppStore((s) => s.plan);
   const user = useAppStore((s) => s.user);
@@ -384,15 +557,23 @@ const DashboardManager = () => {
     load();
   }, []);
 
-  const handleDelete = async (id) => {
-    if (!confirm("Delete this dashboard?")) return;
+  const handleDelete = async () => {
+    if (!deleteModal.dashboard) return;
     try {
-      await api.dashboards.remove(id);
-      notify({ title: "Dashboard deleted" });
+      await api.dashboards.remove(deleteModal.dashboard.id);
+      notify({
+        title: "Dashboard deleted! 🗑️",
+        message: `"${deleteModal.dashboard.title}" has been removed`,
+      });
+      setDeleteModal({ open: false, dashboard: null });
       load();
     } catch (err) {
       notify({ title: "Delete failed", message: err.message });
     }
+  };
+
+  const confirmDelete = (dashboard) => {
+    setDeleteModal({ open: true, dashboard });
   };
 
   const openEditor = (dashboard = null) => {
@@ -451,7 +632,7 @@ const DashboardManager = () => {
                 dashboard={dash}
                 userHandle={userHandle}
                 onEdit={openEditor}
-                onDelete={handleDelete}
+                onDelete={() => confirmDelete(dash)}
                 onView={setViewingDashboard}
               />
             ))}
@@ -478,6 +659,14 @@ const DashboardManager = () => {
           onClose={() => setViewingDashboard(null)}
         />
       )}
+
+      {/* Delete confirmation modal */}
+      <DeleteConfirmModal
+        isOpen={deleteModal.open}
+        onClose={() => setDeleteModal({ open: false, dashboard: null })}
+        onConfirm={handleDelete}
+        title={deleteModal.dashboard?.title}
+      />
     </div>
   );
 };
