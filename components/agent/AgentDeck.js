@@ -122,12 +122,10 @@ const AgentDeck = () => {
   const [insights, setInsights] = useState([]);
   const [dashboardIdea, setDashboardIdea] = useState(null);
   const [suggestions, setSuggestions] = useState([]);
-  const [subject, setSubject] = useState("Portfolio refresh");
-  const [notes, setNotes] = useState(
-    "Highlight fintech work, emphasize AI consulting expertise"
-  );
-  const [suggestSubject, setSuggestSubject] = useState("Keyword refresh");
-  const [suggestData, setSuggestData] = useState("Emphasize AI consulting");
+  const [subject, setSubject] = useState("");
+  const [notes, setNotes] = useState("");
+  const [suggestSubject, setSuggestSubject] = useState("");
+  const [suggestData, setSuggestData] = useState("");
   const [loading, setLoading] = useState({
     insights: false,
     dashboard: false,
@@ -259,9 +257,15 @@ const AgentDeck = () => {
               </div>
             ) : (
               <GlowCard className="py-16 text-center">
-                <div className="text-4xl">🔍</div>
-                <p className="mt-4 text-white/60">
-                  No insights yet. Run an analysis to get started.
+                <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-cyber/20 to-aurora/20">
+                  <span className="text-4xl">🔍</span>
+                </div>
+                <p className="mt-4 font-medium text-white">
+                  Discover profile insights
+                </p>
+                <p className="mt-2 text-sm text-white/60">
+                  AI will analyze your profile and suggest improvements for
+                  visibility and engagement.
                 </p>
               </GlowCard>
             )}
@@ -340,9 +344,15 @@ const AgentDeck = () => {
               </div>
             ) : (
               <GlowCard className="py-16 text-center">
-                <div className="text-4xl">🎨</div>
-                <p className="mt-4 text-white/60">
-                  Enter a subject and notes, then generate a custom layout.
+                <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-cyber/20 to-aurora/20">
+                  <span className="text-4xl">🎨</span>
+                </div>
+                <p className="mt-4 font-medium text-white">
+                  Generate custom layouts
+                </p>
+                <p className="mt-2 text-sm text-white/60">
+                  Describe your goals and let AI create a personalized dashboard
+                  layout for you.
                 </p>
               </GlowCard>
             )}
@@ -413,9 +423,15 @@ const AgentDeck = () => {
               </div>
             ) : (
               <GlowCard className="py-16 text-center">
-                <div className="text-4xl">💡</div>
-                <p className="mt-4 text-white/60">
-                  No suggestions yet. Ask the AI for improvement ideas.
+                <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-cyber/20 to-aurora/20">
+                  <span className="text-4xl">💡</span>
+                </div>
+                <p className="mt-4 font-medium text-white">
+                  Get smart suggestions
+                </p>
+                <p className="mt-2 text-sm text-white/60">
+                  AI will provide actionable recommendations to improve your
+                  profile and visibility.
                 </p>
               </GlowCard>
             )}

@@ -203,7 +203,7 @@ const BillingPlans = () => {
       />
 
       {/* Current plan banner */}
-      <GlowCard className="flex items-center justify-between">
+      <GlowCard className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <p className="text-xs uppercase tracking-widest text-white/50">
             Current plan
@@ -211,8 +211,29 @@ const BillingPlans = () => {
           <p className="text-xl font-semibold text-white">
             {currentPlan?.name || "Free"}
           </p>
+          {currentPlan?.dashboardLimit && (
+            <p className="mt-1 text-sm text-white/60">
+              {currentPlan.dashboardLimit === -1 ||
+              currentPlan.dashboardLimit === Infinity
+                ? "Unlimited dashboards"
+                : `${currentPlan.dashboardLimit} dashboard limit`}
+            </p>
+          )}
         </div>
-        <Tag tone="positive">{currentPlan ? "Active" : "Free tier"}</Tag>
+        <div className="flex items-center gap-3">
+          <Tag tone="positive">{currentPlan ? "Active" : "Free tier"}</Tag>
+          {(!currentPlan || currentPlan?.name?.toLowerCase() === "free") && (
+            <NeonButton
+              onClick={() => {
+                // Scroll to plans
+                const plansGrid = document.querySelector("[data-plans-grid]");
+                plansGrid?.scrollIntoView({ behavior: "smooth" });
+              }}
+            >
+              🚀 Upgrade Now
+            </NeonButton>
+          )}
+        </div>
       </GlowCard>
 
       {/* Plans grid */}
@@ -225,7 +246,7 @@ const BillingPlans = () => {
           />
         </div>
       ) : (
-        <div className="grid gap-6 md:grid-cols-3">
+        <div data-plans-grid className="grid gap-6 md:grid-cols-3">
           <AnimatePresence>
             {plans.map((plan, idx) => (
               <PlanCard

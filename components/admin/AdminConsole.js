@@ -222,13 +222,22 @@ const UserRow = ({ user, onPlan, onBlock, onDelete }) => (
     </div>
 
     {/* Info */}
-    <div className="flex-1">
-      <div className="flex items-center gap-2">
-        <p className="font-medium text-white">{user.name || "Unnamed"}</p>
+    <div className="flex-1 min-w-0">
+      <div className="flex flex-wrap items-center gap-2">
+        <p className="font-medium text-white truncate">
+          {user.name || "Unnamed"}
+        </p>
+        {user.role === "admin" && <Tag tone="accent">Admin</Tag>}
         {user.blocked && <Tag tone="danger">Blocked</Tag>}
       </div>
-      <p className="text-sm text-white/60">{user.email}</p>
-      <p className="text-xs text-white/40">ID: {user.id}</p>
+      <p className="text-sm text-white/60 truncate">{user.email}</p>
+      {user.handle && <p className="text-xs text-cyber">@{user.handle}</p>}
+      <p className="text-xs text-white/40 mt-1">
+        Joined{" "}
+        {user.createdAt
+          ? new Date(user.createdAt).toLocaleDateString()
+          : "Unknown"}
+      </p>
     </div>
 
     {/* Plan */}
@@ -297,6 +306,7 @@ const AdminConsole = () => {
   const paidUsers = users.filter(
     (u) => u.plan === "growth" || u.plan === "scale"
   ).length;
+  const adminUsers = users.filter((u) => u.role === "admin").length;
 
   /* Filtered users */
   const filteredUsers = users.filter((u) => {
@@ -369,8 +379,9 @@ const AdminConsole = () => {
       />
 
       {/* Stats */}
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Total users" value={totalUsers} icon="👥" />
+        <StatCard label="Admins" value={adminUsers} icon="🛡️" />
         <StatCard label="Paid users" value={paidUsers} icon="💎" />
         <StatCard label="Blocked" value={blockedUsers} icon="🚫" />
       </div>

@@ -100,6 +100,8 @@ const ProfileCard = ({ profile }) => {
 const DashboardPreview = ({ dashboard }) => {
   if (!dashboard) return null;
 
+  const sections = dashboard.layout?.sections || [];
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -116,12 +118,33 @@ const DashboardPreview = ({ dashboard }) => {
         </Tag>
       </div>
 
-      {dashboard.layout && (
-        <div className="rounded-xl border border-white/10 bg-black/30 p-4">
-          <p className="text-xs text-white/40">Layout configuration</p>
-          <pre className="mt-2 max-h-40 overflow-auto text-xs text-white/60">
-            {JSON.stringify(dashboard.layout, null, 2)}
-          </pre>
+      {sections.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs text-white/40 uppercase tracking-widest">
+            Sections
+          </p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {sections.map((section, i) => (
+              <div
+                key={i}
+                className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 p-3"
+              >
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-cyber/20 text-sm font-bold text-cyber">
+                  {i + 1}
+                </div>
+                <span className="text-sm text-white">{section}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {dashboard.layout?.style && (
+        <div className="flex flex-wrap gap-2">
+          <Tag tone="neutral">{dashboard.layout.style}</Tag>
+          {dashboard.layout.colorScheme && (
+            <Tag tone="neutral">{dashboard.layout.colorScheme}</Tag>
+          )}
         </div>
       )}
 
@@ -236,9 +259,9 @@ const ShareLinks = ({ handle, dashboard }) => {
 /* ─────────────────────────────────────────────────────────── */
 const PublicPreview = () => {
   const [activeTab, setActiveTab] = useState("profile");
-  const [handle, setHandle] = useState("ava");
+  const [handle, setHandle] = useState("");
   const [plan, setPlan] = useState("growth");
-  const [dashboard, setDashboard] = useState("hire-me");
+  const [dashboard, setDashboard] = useState("");
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(false);
   const { notify } = useToast();
@@ -302,10 +325,10 @@ const PublicPreview = () => {
           <div>
             <label className="text-xs text-white/60">Handle</label>
             <input
-              className="mt-1 w-full rounded-2xl bg-white/5 px-4 py-3 text-white outline-none"
+              className="mt-1 w-full rounded-2xl bg-white/5 px-4 py-3 text-white outline-none placeholder:text-white/30"
               value={handle}
               onChange={(e) => setHandle(e.target.value)}
-              placeholder="username"
+              placeholder="Enter username..."
             />
           </div>
           <div>
@@ -323,10 +346,10 @@ const PublicPreview = () => {
           <div>
             <label className="text-xs text-white/60">Dashboard slug</label>
             <input
-              className="mt-1 w-full rounded-2xl bg-white/5 px-4 py-3 text-white outline-none"
+              className="mt-1 w-full rounded-2xl bg-white/5 px-4 py-3 text-white outline-none placeholder:text-white/30"
               value={dashboard}
               onChange={(e) => setDashboard(e.target.value)}
-              placeholder="hire-me"
+              placeholder="Enter dashboard slug..."
             />
           </div>
         </div>
@@ -425,10 +448,31 @@ const PublicPreview = () => {
         </div>
       ) : (
         <GlowCard className="py-16 text-center">
-          <div className="text-4xl">🔍</div>
-          <p className="mt-4 text-white/60">
-            Enter a handle and load a preview to see public content.
-          </p>
+          <div className="mx-auto max-w-md space-y-6">
+            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-cyber/20 to-aurora/20">
+              <span className="text-4xl">🔍</span>
+            </div>
+            <div>
+              <p className="text-lg font-semibold text-white">
+                Explore public content
+              </p>
+              <p className="mt-2 text-sm text-white/60">
+                Enter a username handle above to preview their public profile,
+                dashboards, or plan details.
+              </p>
+            </div>
+            <div className="flex flex-wrap justify-center gap-3">
+              <div className="rounded-full bg-white/5 px-4 py-2 text-xs text-white/40">
+                💡 Enter username handle
+              </div>
+              <div className="rounded-full bg-white/5 px-4 py-2 text-xs text-white/40">
+                📊 Load dashboard slug
+              </div>
+              <div className="rounded-full bg-white/5 px-4 py-2 text-xs text-white/40">
+                💎 View plan details
+              </div>
+            </div>
+          </div>
         </GlowCard>
       )}
     </div>

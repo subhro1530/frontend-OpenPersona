@@ -71,8 +71,9 @@ const ProfileEditor = () => {
   const [savingTemplate, setSavingTemplate] = useState(false);
   const [templates, setTemplates] = useState([]);
   const [newHandle, setNewHandle] = useState("");
-  const [upgradeCode, setUpgradeCode] = useState("admin@openpersona");
+  const [upgradeCode, setUpgradeCode] = useState("");
   const [upgrading, setUpgrading] = useState(false);
+  const [downgrading, setDowngrading] = useState(false);
   const setUser = useAppStore((s) => s.setUser);
   const setPlan = useAppStore((s) => s.setPlan);
   const isAdmin = useAppStore((s) => s.isAdmin);
@@ -146,10 +147,17 @@ const ProfileEditor = () => {
   };
 
   const upgradeAdmin = async () => {
+    if (!upgradeCode?.trim()) {
+      notify({
+        title: "Passphrase required",
+        message: "Enter the admin enrollment passphrase.",
+      });
+      return;
+    }
     setUpgrading(true);
     try {
       const response = await api.auth.upgradeAdmin({
-        adminCode: upgradeCode || "admin@openpersona",
+        adminCode: upgradeCode,
       });
       const nextProfile = response?.user || response?.profile || response;
       if (nextProfile) {
@@ -165,6 +173,28 @@ const ProfileEditor = () => {
       notify({ title: "Upgrade failed", message: err.message });
     } finally {
       setUpgrading(false);
+    }
+  };
+
+  const downgradeAdmin = async () => {
+    if (!confirm("Are you sure you want to downgrade to regular user?")) return;
+    setDowngrading(true);
+    try {
+      const response = await api.auth.downgradeAdmin();
+      const nextProfile = response?.user || response?.profile || response;
+      if (nextProfile) {
+        setProfile((prev) => ({ ...prev, ...nextProfile, role: "user" }));
+        setUser({ ...nextProfile, role: "user", isAdmin: false });
+        setPlan(nextProfile.plan || "free");
+      }
+      notify({
+        title: "Downgraded to user",
+        message: "Admin privileges removed",
+      });
+    } catch (err) {
+      notify({ title: "Downgrade failed", message: err.message });
+    } finally {
+      setDowngrading(false);
     }
   };
 
@@ -192,7 +222,7 @@ const ProfileEditor = () => {
     <div className="space-y-8">
       <SectionHeader
         eyebrow="Profile"
-        title="Identity metadata"
+        title="Manage metadata, handles, templates"
         description="Manage your public profile, handle, template, and social links."
         actions={
           <NeonButton onClick={save} disabled={saving}>
@@ -340,28 +370,51 @@ const ProfileEditor = () => {
         )}
       </GlowCard>
 
-      {/* Admin upgrade */}
-      {!isAdmin && (
+      {/* Admin upgrade/downgrade */}
+      {!isAdmin ? (
         <GlowCard className="space-y-3">
           <div>
             <p className="text-sm uppercase tracking-widest text-white/50">
               Unlock admin workspace
             </p>
             <p className="text-xs text-white/60">
-              POST /api/auth/upgrade/admin – enter the shared enrollment code to
-              elevate this account.
+              Enter the admin enrollment passphrase to elevate this account.
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
             <input
               className="flex-1 rounded-2xl bg-white/5 px-4 py-3 text-white outline-none"
+              type="password"
+              autoComplete="new-password"
               value={upgradeCode}
-              placeholder="admin@openpersona"
+              placeholder="Admin passphrase"
               onChange={(e) => setUpgradeCode(e.target.value)}
             />
             <NeonButton onClick={upgradeAdmin} disabled={upgrading}>
-              {upgrading ? "Upgrading..." : "Upgrade"}
+              {upgrading ? "Upgrading..." : "Upgrade to Admin"}
             </NeonButton>
+          </div>
+        </GlowCard>
+      ) : (
+        <GlowCard className="space-y-3">
+          <div>
+            <p className="text-sm uppercase tracking-widest text-white/50">
+              Admin status
+            </p>
+            <p className="text-xs text-white/60">
+              You currently have admin privileges. You can downgrade to regular
+              user.
+            </p>
+          </div>
+          <div className="flex items-center justify-between">
+            <Tag tone="accent">Admin Active</Tag>
+            <button
+              onClick={downgradeAdmin}
+              disabled={downgrading}
+              className="rounded-full border border-pulse/50 px-4 py-2 text-sm text-pulse hover:bg-pulse/10 disabled:opacity-50"
+            >
+              {downgrading ? "Downgrading..." : "Downgrade to User"}
+            </button>
           </div>
         </GlowCard>
       )}

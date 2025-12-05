@@ -9,81 +9,102 @@ import Tag from "@/components/ui/Tag";
 import api from "@/lib/api-client";
 import { useToast } from "@/components/ui/ToastProvider";
 import useAppStore from "@/store/useAppStore";
-import { normalizeDashboardsPayload } from "@/lib/dashboard-utils";
+import {
+  normalizeDashboardsPayload,
+  getFrontendUrl,
+} from "@/lib/dashboard-utils";
 
 /* ─────────────────────────────────────────────────────────── */
 /* Dashboard card                                               */
 /* ─────────────────────────────────────────────────────────── */
-const DashboardCard = ({ dashboard, onEdit, onDelete, onView }) => (
-  <motion.div
-    layout
-    initial={{ opacity: 0, scale: 0.95 }}
-    animate={{ opacity: 1, scale: 1 }}
-    exit={{ opacity: 0, scale: 0.95 }}
-    className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 transition hover:border-white/20"
-  >
-    {/* Preview gradient */}
-    <div
-      className="h-32 bg-gradient-to-br from-aurora/20 via-cyber/20 to-pulse/20"
-      onClick={() => onView(dashboard)}
-    />
+const DashboardCard = ({ dashboard, userHandle, onEdit, onDelete, onView }) => {
+  const frontendUrl = getFrontendUrl();
+  const dashboardUrl = `${frontendUrl}/p/${userHandle}/${dashboard.slug}`;
 
-    <div className="space-y-3 p-4">
-      <div className="flex items-start justify-between">
-        <div>
-          <Tag
-            tone={dashboard.visibility === "public" ? "positive" : "neutral"}
-          >
-            {dashboard.visibility}
-          </Tag>
-          <h3 className="mt-2 text-lg font-semibold text-white">
-            {dashboard.title}
-          </h3>
-          <p className="text-sm text-white/60">/{dashboard.slug}</p>
-        </div>
-        {dashboard.isPrimary && (
-          <span className="rounded-full bg-aurora/20 px-2 py-1 text-xs text-aurora">
-            Primary
-          </span>
-        )}
-      </div>
+  return (
+    <motion.div
+      layout
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 transition hover:border-white/20"
+    >
+      {/* Preview gradient */}
+      <div
+        className="h-32 cursor-pointer bg-gradient-to-br from-aurora/20 via-cyber/20 to-pulse/20"
+        onClick={() => onView(dashboard)}
+      />
 
-      {/* Layout preview */}
-      {dashboard.layout?.sections && (
-        <div className="flex flex-wrap gap-1">
-          {dashboard.layout.sections.slice(0, 4).map((section) => (
-            <span
-              key={section}
-              className="rounded-full bg-white/10 px-2 py-0.5 text-xs text-white/60"
+      <div className="space-y-3 p-4">
+        <div className="flex items-start justify-between">
+          <div>
+            <Tag
+              tone={dashboard.visibility === "public" ? "positive" : "neutral"}
             >
-              {section}
-            </span>
-          ))}
-          {dashboard.layout.sections.length > 4 && (
-            <span className="text-xs text-white/40">
-              +{dashboard.layout.sections.length - 4} more
+              {dashboard.visibility}
+            </Tag>
+            <h3 className="mt-2 text-lg font-semibold text-white">
+              {dashboard.title}
+            </h3>
+            <p className="text-sm text-white/60">/{dashboard.slug}</p>
+          </div>
+          {dashboard.isPrimary && (
+            <span className="rounded-full bg-aurora/20 px-2 py-1 text-xs text-aurora">
+              Primary
             </span>
           )}
         </div>
-      )}
 
-      <div className="flex gap-2 pt-2">
-        <NeonButton
-          className="flex-1 justify-center text-xs"
-          onClick={() => onEdit(dashboard)}
-        >
-          Edit
-        </NeonButton>
-        <button
-          onClick={() => onDelete(dashboard.id)}
-          className="rounded-full border border-pulse/50 px-3 py-1 text-xs text-pulse hover:bg-pulse/10"
-        >
-          Delete
-        </button>
+        {/* Public URL */}
+        <div className="rounded-xl bg-black/30 p-2">
+          <p className="text-xs text-white/40">Public URL:</p>
+          <a
+            href={dashboardUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block truncate text-xs text-cyber hover:underline"
+          >
+            {dashboardUrl}
+          </a>
+        </div>
+
+        {/* Layout preview */}
+        {dashboard.layout?.sections && (
+          <div className="flex flex-wrap gap-1">
+            {dashboard.layout.sections.slice(0, 4).map((section) => (
+              <span
+                key={section}
+                className="rounded-full bg-white/10 px-2 py-0.5 text-xs text-white/60"
+              >
+                {section}
+              </span>
+            ))}
+            {dashboard.layout.sections.length > 4 && (
+              <span className="text-xs text-white/40">
+                +{dashboard.layout.sections.length - 4} more
+              </span>
+            )}
+          </div>
+        )}
+
+        <div className="flex gap-2 pt-2">
+          <NeonButton
+            className="flex-1 justify-center text-xs"
+            onClick={() => onEdit(dashboard)}
+          >
+            Edit
+          </NeonButton>
+          <button
+            onClick={() => onDelete(dashboard.id)}
+            className="rounded-full border border-pulse/50 px-3 py-1 text-xs text-pulse hover:bg-pulse/10"
+          >
+            Delete
+          </button>
+        </div>
       </div>
-    </div>
-  </motion.div>
-);
+    </motion.div>
+  );
+};
 
 /* ─────────────────────────────────────────────────────────── */
 /* Dashboard editor modal                                       */
@@ -323,9 +344,11 @@ const DashboardManager = () => {
   const [viewingDashboard, setViewingDashboard] = useState(null);
   const setStoreDashboards = useAppStore((s) => s.setDashboards);
   const plan = useAppStore((s) => s.plan);
+  const user = useAppStore((s) => s.user);
   const canCreate = useAppStore((s) => s.canCreateDashboard);
   const { notify } = useToast();
   const safeDashboards = normalizeDashboardsPayload(dashboards);
+  const userHandle = user?.handle || user?.username || "user";
 
   const load = async () => {
     try {
@@ -409,6 +432,7 @@ const DashboardManager = () => {
               <DashboardCard
                 key={dash.id}
                 dashboard={dash}
+                userHandle={userHandle}
                 onEdit={openEditor}
                 onDelete={handleDelete}
                 onView={setViewingDashboard}

@@ -11,6 +11,7 @@ import { useToast } from "@/components/ui/ToastProvider";
 import api from "@/lib/api-client";
 import useAppStore from "@/store/useAppStore";
 import { interpretReadiness, describeMissing } from "@/lib/readiness-utils";
+import { normalizeResumesPayload } from "@/lib/dashboard-utils";
 
 /* ─────────────────────────────────────────────────────────── */
 /* Blueprint section cards                                      */
@@ -249,8 +250,9 @@ const PortfolioBuilder = () => {
 
   const blueprint = useAppStore((s) => s.blueprint);
   const setBlueprint = useAppStore((s) => s.setBlueprint);
-  const resumes = useAppStore((s) => s.resumes);
+  const storeResumes = useAppStore((s) => s.resumes);
   const setResumes = useAppStore((s) => s.setResumes);
+  const resumes = normalizeResumesPayload(storeResumes);
   const { notify } = useToast();
 
   /* ───────── Load blueprint, status, templates, resumes ───────── */
@@ -453,12 +455,18 @@ const PortfolioBuilder = () => {
                 value={resumeId}
                 onChange={(e) => setResumeId(e.target.value)}
               >
+                <option value="">Select a resume...</option>
                 {resumes.map((r) => (
                   <option key={r.id} value={r.id}>
                     {r.filename}
                   </option>
                 ))}
               </select>
+              {resumes.length === 0 && (
+                <p className="mt-2 text-xs text-white/50">
+                  No resumes uploaded yet. Go to Resume Intelligence to upload.
+                </p>
+              )}
             </div>
             <div>
               <label className="text-sm text-white/70">Notes to Gemini</label>

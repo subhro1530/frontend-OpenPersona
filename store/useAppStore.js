@@ -2,7 +2,10 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { clearAuthToken } from "@/lib/api-client";
 import { subscribeUnauthorized } from "@/lib/auth-events";
-import { normalizeDashboardsPayload } from "@/lib/dashboard-utils";
+import {
+  normalizeDashboardsPayload,
+  normalizeResumesPayload,
+} from "@/lib/dashboard-utils";
 
 let unauthorizedSubscribed = false;
 
@@ -78,7 +81,8 @@ export const useAppStore = create(
       removeFile: (id) =>
         set((state) => ({ files: state.files.filter((f) => f.id !== id) })),
 
-      setResumes: (resumes) => set({ resumes }),
+      setResumes: (resumes) =>
+        set({ resumes: normalizeResumesPayload(resumes) }),
       addResume: (resume) =>
         set((state) => ({ resumes: [...state.resumes, resume] })),
 

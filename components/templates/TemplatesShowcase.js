@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import GlowCard from "@/components/ui/GlowCard";
 import NeonButton from "@/components/ui/NeonButton";
@@ -14,22 +15,52 @@ const templateVisuals = {
   "Neon Portfolio": {
     gradient: "linear-gradient(135deg, #5c4dff 0%, #00f7ff 100%)",
     accent: "#00f7ff",
-    sections: ["Hero", "Skills grid", "Projects", "CTA"],
+    sections: [
+      "Hero",
+      "Experience",
+      "Skills",
+      "Projects",
+      "Education",
+      "Certifications",
+      "Contact",
+    ],
   },
   "Case Study Atlas": {
     gradient: "linear-gradient(135deg, #ff7ee2 0%, #ffb347 100%)",
     accent: "#ff7ee2",
-    sections: ["Timeline", "Gallery", "Testimonials", "CTA"],
+    sections: [
+      "Timeline",
+      "Experience",
+      "Gallery",
+      "Projects",
+      "Testimonials",
+      "Links",
+      "CTA",
+    ],
   },
   "Minimal Noir": {
     gradient: "linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)",
     accent: "#e94560",
-    sections: ["Introduction", "Work", "Contact"],
+    sections: [
+      "Introduction",
+      "Experience",
+      "Skills",
+      "Projects",
+      "Resume Links",
+      "Contact",
+    ],
   },
   "Creative Canvas": {
     gradient: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
     accent: "#667eea",
-    sections: ["Hero banner", "Portfolio grid", "About", "Social links"],
+    sections: [
+      "Hero banner",
+      "Portfolio grid",
+      "Experience",
+      "Certifications",
+      "About",
+      "Social links",
+    ],
   },
 };
 
@@ -37,28 +68,28 @@ const defaultTemplates = [
   {
     id: "portfolio",
     label: "Neon Portfolio",
-    description: "Hero + skills grid + CTA",
+    description: "Complete portfolio with experience, skills, and projects",
     slug: "portfolio",
     isPremium: false,
   },
   {
     id: "case-study",
     label: "Case Study Atlas",
-    description: "Timeline + gallery + CTA",
+    description: "Timeline-based with gallery and testimonials",
     slug: "case-study",
     isPremium: false,
   },
   {
     id: "minimal",
     label: "Minimal Noir",
-    description: "Clean, dark, elegant",
+    description: "Clean, dark, elegant with resume links",
     slug: "minimal",
     isPremium: true,
   },
   {
     id: "creative",
     label: "Creative Canvas",
-    description: "Artistic portfolio layout",
+    description: "Artistic layout with certification showcase",
     slug: "creative",
     isPremium: true,
   },
@@ -67,7 +98,13 @@ const defaultTemplates = [
 /* ─────────────────────────────────────────────────────────── */
 /* Template card                                                */
 /* ─────────────────────────────────────────────────────────── */
-const TemplateCard = ({ template, isActive, onSelect, onPreview }) => {
+const TemplateCard = ({
+  template,
+  isActive,
+  onSelect,
+  onPreview,
+  onPremiumClick,
+}) => {
   const visual = templateVisuals[template.label] || {
     gradient: "linear-gradient(135deg, #5c4dff 0%, #ff7ee2 100%)",
     accent: "#5c4dff",
@@ -298,6 +335,7 @@ const ApplyModal = ({ template, onConfirm, onClose, loading }) => {
 /* Main component                                               */
 /* ─────────────────────────────────────────────────────────── */
 const TemplatesShowcase = () => {
+  const router = useRouter();
   const [templates, setTemplates] = useState(defaultTemplates);
   const [active, setActive] = useState("portfolio");
   const [previewTemplate, setPreviewTemplate] = useState(null);
@@ -337,6 +375,30 @@ const TemplatesShowcase = () => {
   });
   const { notify } = useToast();
   const isAdmin = useAppStore((s) => s.isAdmin);
+  const plan = useAppStore((s) => s.plan);
+
+  // Check if user has a paid plan
+  const isPaidPlan =
+    plan?.name?.toLowerCase()?.includes("growth") ||
+    plan?.name?.toLowerCase()?.includes("scale") ||
+    plan?.name?.toLowerCase()?.includes("pro") ||
+    plan?.name?.toLowerCase()?.includes("premium");
+
+  // Handle template selection - redirect to billing for premium templates if not paid
+  const handleTemplateSelect = useCallback(
+    (template) => {
+      if (template.isPremium && !isPaidPlan) {
+        notify({
+          title: "Premium template",
+          message: "Upgrade your plan to use premium templates.",
+        });
+        router.push("/app/billing");
+        return;
+      }
+      setApplyTemplate(template);
+    },
+    [isPaidPlan, notify, router]
+  );
 
   useEffect(() => {
     const load = async () => {
@@ -537,7 +599,7 @@ const TemplatesShowcase = () => {
               key={template.id}
               template={template}
               isActive={active === (template.slug || template.id)}
-              onSelect={setApplyTemplate}
+              onSelect={handleTemplateSelect}
               onPreview={setPreviewTemplate}
             />
           ))}
@@ -767,7 +829,7 @@ const TemplatesShowcase = () => {
           onClose={() => setPreviewTemplate(null)}
           onApply={(t) => {
             setPreviewTemplate(null);
-            setApplyTemplate(t);
+            handleTemplateSelect(t);
           }}
         />
       )}

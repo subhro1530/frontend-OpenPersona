@@ -46,7 +46,7 @@ const ResumeCard = ({ resume, onSelect, onGetUrl, selected }) => (
 /* ─────────────────────────────────────────────────────────── */
 /* Analysis panel                                               */
 /* ─────────────────────────────────────────────────────────── */
-const AnalysisPanel = ({ analysis, onPush }) => {
+const AnalysisPanel = ({ analysis, onPush, onCreateDashboard }) => {
   if (!analysis) {
     return (
       <div className="flex h-full items-center justify-center text-white/60">
@@ -135,6 +135,29 @@ const AnalysisPanel = ({ analysis, onPush }) => {
         </div>
       )}
 
+      {/* Projects */}
+      {analysis.projects?.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs uppercase tracking-widest text-white/50">
+            Projects
+          </p>
+          <div className="space-y-2">
+            {analysis.projects.slice(0, 3).map((proj, idx) => (
+              <div key={idx} className="rounded-2xl border border-white/10 p-3">
+                <p className="font-semibold text-white">
+                  {proj.name || proj.title}
+                </p>
+                {proj.description && (
+                  <p className="mt-1 text-xs text-white/70">
+                    {proj.description}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Keywords */}
       {analysis.keywords?.length > 0 && (
         <div className="space-y-2">
@@ -163,7 +186,31 @@ const AnalysisPanel = ({ analysis, onPush }) => {
         </div>
       )}
 
-      <NeonButton onClick={onPush}>Push to Portfolio Builder</NeonButton>
+      {/* Certifications */}
+      {analysis.certifications?.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs uppercase tracking-widest text-white/50">
+            Certifications
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {analysis.certifications.map((cert, idx) => (
+              <Tag key={idx} tone="positive">
+                {cert.name || cert}
+              </Tag>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="flex flex-wrap gap-3 pt-4">
+        <NeonButton onClick={onPush}>Push to Portfolio Builder</NeonButton>
+        <NeonButton
+          onClick={onCreateDashboard}
+          className="bg-aurora/20 border-aurora/50"
+        >
+          🚀 Create Dashboard from Resume
+        </NeonButton>
+      </div>
     </div>
   );
 };
@@ -176,18 +223,21 @@ const ResumeIntelligence = () => {
   const [selected, setSelected] = useState(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [creatingDashboard, setCreatingDashboard] = useState(false);
   const [downloadUrl, setDownloadUrl] = useState("");
   const [strategy, setStrategy] = useState("full");
   const [notes, setNotes] = useState("");
   const fileInputRef = useRef();
   const { notify } = useToast();
   const setResumes = useAppStore((s) => s.setResumes);
+  const canCreate = useAppStore((s) => s.canCreateDashboard);
 
   const load = async () => {
     try {
       const data = await api.resume.list();
-      setItems(data || []);
-      setResumes(data || []);
+      const normalized = Array.isArray(data) ? data : [];
+      setItems(normalized);
+      setResumes(normalized);
     } catch (err) {
       notify({ title: "Resume fetch failed", message: err.message });
     }
@@ -259,11 +309,71 @@ const ResumeIntelligence = () => {
     }
   };
 
+  const createDashboardFromResume = async () => {
+    if (!selected?.id || !selected?.analysis) {
+      notify({
+        title: "Analyze resume first",
+        message: "Run analysis before creating a dashboard",
+      });
+      return;
+    }
+    if (!canCreate()) {
+      notify({
+        title: "Plan limit reached",
+        message: "Upgrade your plan to create more dashboards",
+      });
+      return;
+    }
+    if (!confirm("Create a new dashboard from this resume analysis?")) return;
+
+    setCreatingDashboard(true);
+    try {
+      const analysis = selected.analysis;
+      const title = analysis.contact?.name
+        ? `${analysis.contact.name}'s Portfolio`
+        : "My Portfolio";
+      const slug = title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/-+/g, "-");
+
+      await api.dashboards.create({
+        title,
+        slug,
+        visibility: "public",
+        layout: {
+          sections: [
+            "hero",
+            "experience",
+            "skills",
+            "projects",
+            "education",
+            "contact",
+          ],
+          data: {
+            contact: analysis.contact,
+            skills: analysis.skills,
+            experience: analysis.experience,
+            education: analysis.education,
+            projects: analysis.projects,
+            achievements: analysis.achievements,
+          },
+        },
+      });
+
+      notify({ title: "Dashboard created!", message: `Created: ${title}` });
+    } catch (err) {
+      notify({ title: "Dashboard creation failed", message: err.message });
+    } finally {
+      setCreatingDashboard(false);
+    }
+  };
+
   if (!items.length && !uploading) {
     return (
       <EmptyState
         title="Upload your first resume"
-        message="POST /api/resume/upload – Gemini will extract structure"
+        message="Upload your resume to get AI-powered analysis and insights"
         action={
           <NeonButton onClick={() => fileInputRef.current?.click()}>
             Upload resume
@@ -382,9 +492,25 @@ const ResumeIntelligence = () => {
                 </div>
               )}
 
+              {creatingDashboard && (
+                <div className="flex items-center gap-3 text-sm text-aurora">
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{
+                      repeat: Infinity,
+                      duration: 1,
+                      ease: "linear",
+                    }}
+                    className="h-5 w-5 rounded-full border-2 border-aurora border-t-transparent"
+                  />
+                  Creating dashboard from resume...
+                </div>
+              )}
+
               <AnalysisPanel
                 analysis={selected.analysis}
                 onPush={pushToBuilder}
+                onCreateDashboard={createDashboardFromResume}
               />
             </div>
           ) : (
