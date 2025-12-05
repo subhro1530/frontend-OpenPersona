@@ -139,49 +139,196 @@ const AgentDeck = () => {
     { id: "suggestions", label: "Smart suggestions", icon: "💡" },
   ];
 
+  const getErrorMessage = (err) => {
+    const msg = err.message || "Unknown error";
+    if (msg.includes("401")) return "Session expired. Please log in again.";
+    if (msg.includes("403"))
+      return "Feature not available for your plan. Upgrade to access AI features.";
+    if (msg.includes("404"))
+      return "AI service not configured. Contact support.";
+    if (msg.includes("500"))
+      return "AI service temporarily unavailable. Try again later.";
+    if (msg.includes("Network") || msg.includes("fetch"))
+      return "Network error. Check your connection.";
+    return msg;
+  };
+
   const runInsights = async () => {
     setLoading((l) => ({ ...l, insights: true }));
     try {
       const data = await api.agent.insights();
       const insightsArray = Array.isArray(data)
         ? data
-        : data?.insights || [data];
-      setInsights(insightsArray);
-      notify({ title: "Insights synced" });
+        : data?.insights || (data ? [data] : []);
+      if (insightsArray.length === 0) {
+        // Show demo insights if no data
+        setInsights([
+          {
+            type: "Profile Completeness",
+            title: "Complete your profile",
+            description: "Add more details to improve visibility",
+            score: 65,
+          },
+          {
+            type: "Engagement",
+            title: "Add portfolio projects",
+            description: "Showcase your best work to attract opportunities",
+            score: 40,
+          },
+          {
+            type: "SEO",
+            title: "Optimize your bio",
+            description: "Use keywords relevant to your industry",
+            score: 55,
+          },
+        ]);
+        notify({
+          title: "Sample insights loaded",
+          message: "Complete your profile for personalized insights",
+        });
+      } else {
+        setInsights(insightsArray);
+        notify({
+          title: "Insights synced",
+          message: `${insightsArray.length} insights found`,
+        });
+      }
     } catch (err) {
-      notify({ title: "Insights failed", message: err.message });
+      // Show demo insights on error
+      setInsights([
+        {
+          type: "Profile",
+          title: "Profile analysis pending",
+          description:
+            "AI features require a complete profile. Add your bio, skills, and projects.",
+          score: 50,
+        },
+        {
+          type: "Tip",
+          title: "Boost your presence",
+          description: "Connect your social profiles and add portfolio items.",
+          score: 60,
+        },
+      ]);
+      notify({ title: "Using demo insights", message: getErrorMessage(err) });
     } finally {
       setLoading((l) => ({ ...l, insights: false }));
     }
   };
 
   const generateDashboard = async () => {
+    if (!subject?.trim()) {
+      notify({
+        title: "Subject required",
+        message: "Enter a dashboard subject to generate ideas",
+      });
+      return;
+    }
     setLoading((l) => ({ ...l, dashboard: true }));
     try {
       const data = await api.agent.generateDashboard({
         subject,
         data: { priority: "case-study", notes },
       });
-      setDashboardIdea(data);
-      notify({ title: "Dashboard layout generated" });
+      if (data?.layout || data?.sections) {
+        setDashboardIdea(data);
+        notify({
+          title: "Dashboard layout generated",
+          message: "Review and customize your layout",
+        });
+      } else {
+        // Demo layout
+        setDashboardIdea({
+          layout: {
+            style: "modern",
+            colorScheme: "dark",
+            sections: [
+              "Hero Banner",
+              "About Me",
+              "Skills Showcase",
+              "Featured Projects",
+              "Testimonials",
+              "Contact Form",
+            ],
+          },
+          suggestions: [
+            "Add a call-to-action",
+            "Include social proof",
+            "Showcase 3-5 top projects",
+          ],
+        });
+        notify({
+          title: "Sample layout generated",
+          message: "Customize this layout for your needs",
+        });
+      }
     } catch (err) {
-      notify({ title: "Dashboard idea failed", message: err.message });
+      // Demo layout on error
+      setDashboardIdea({
+        layout: {
+          style: "professional",
+          colorScheme: "cyber",
+          sections: [
+            "Introduction",
+            "Experience Timeline",
+            "Project Gallery",
+            "Skills Matrix",
+            "Contact",
+          ],
+        },
+        note: "AI-generated layouts coming soon. Here's a suggested structure.",
+      });
+      notify({ title: "Demo layout loaded", message: getErrorMessage(err) });
     } finally {
       setLoading((l) => ({ ...l, dashboard: false }));
     }
   };
 
   const getSuggestions = async () => {
+    if (!suggestSubject?.trim()) {
+      notify({
+        title: "Topic required",
+        message: "Enter a topic to get suggestions",
+      });
+      return;
+    }
     setLoading((l) => ({ ...l, suggestions: true }));
     try {
       const data = await api.agent.suggestions({
         subject: suggestSubject,
         data: suggestData,
       });
-      setSuggestions(data?.suggestions || data || []);
-      notify({ title: "Suggestions received" });
+      const suggestionsList =
+        data?.suggestions || (Array.isArray(data) ? data : []);
+      if (suggestionsList.length === 0) {
+        setSuggestions([
+          { text: "Add a professional headshot to increase trust" },
+          { text: "Include measurable achievements in your bio" },
+          { text: "Add links to your GitHub or portfolio" },
+          { text: "Write a compelling tagline for your profile" },
+        ]);
+        notify({
+          title: "Sample suggestions loaded",
+          message: "Personalized suggestions coming with AI",
+        });
+      } else {
+        setSuggestions(suggestionsList);
+        notify({
+          title: "Suggestions received",
+          message: `${suggestionsList.length} suggestions found`,
+        });
+      }
     } catch (err) {
-      notify({ title: "Suggestions failed", message: err.message });
+      setSuggestions([
+        { text: "Optimize your profile headline for search visibility" },
+        { text: "Add case studies to demonstrate your expertise" },
+        { text: "Include client testimonials for social proof" },
+        { text: "Connect your LinkedIn for credibility" },
+      ]);
+      notify({
+        title: "Demo suggestions loaded",
+        message: getErrorMessage(err),
+      });
     } finally {
       setLoading((l) => ({ ...l, suggestions: false }));
     }
@@ -189,8 +336,10 @@ const AgentDeck = () => {
 
   const handleApplySuggestion = (suggestion) => {
     const text = typeof suggestion === "string" ? suggestion : suggestion.text;
-    notify({ title: "Suggestion applied", message: text });
-    // Could integrate with portfolio builder here
+    notify({
+      title: "Suggestion noted",
+      message: `"${text}" - Apply this in your profile editor`,
+    });
   };
 
   return (

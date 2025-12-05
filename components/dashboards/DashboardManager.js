@@ -58,14 +58,31 @@ const DashboardCard = ({ dashboard, userHandle, onEdit, onDelete, onView }) => {
         {/* Public URL */}
         <div className="rounded-xl bg-black/30 p-2">
           <p className="text-xs text-white/40">Public URL:</p>
-          <a
-            href={dashboardUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block truncate text-xs text-cyber hover:underline"
-          >
-            {dashboardUrl}
-          </a>
+          {userHandle === "user" ? (
+            <div className="space-y-1">
+              <p className="text-xs text-amber-400">
+                ⚠️ Set your handle in Profile to enable public links
+              </p>
+              <p className="truncate text-xs text-white/30">{dashboardUrl}</p>
+            </div>
+          ) : (
+            <a
+              href={dashboardUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block truncate text-xs text-cyber hover:underline"
+              onClick={(e) => {
+                if (!dashboard.slug) {
+                  e.preventDefault();
+                  alert(
+                    "Dashboard slug is missing. Please edit and save the dashboard."
+                  );
+                }
+              }}
+            >
+              {dashboardUrl}
+            </a>
+          )}
         </div>
 
         {/* Layout preview */}

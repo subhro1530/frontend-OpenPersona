@@ -110,24 +110,70 @@ const ProfileEditor = () => {
     setSaving(true);
     try {
       const result = await api.profile.update(profile);
-      setUser(result?.user || profile);
-      notify({ title: "Profile saved" });
+      const updatedUser = result?.user || result?.profile || result || profile;
+      setUser(updatedUser);
+      setProfile(updatedUser);
+      notify({
+        title: "Profile saved successfully",
+        message: `Updated: ${
+          updatedUser.name || updatedUser.handle || "profile"
+        }`,
+      });
     } catch (err) {
-      notify({ title: "Save failed", message: err.message });
+      const errorMsg = err.message || "Unknown error occurred";
+      notify({
+        title: "Save failed",
+        message: errorMsg.includes("401")
+          ? "Session expired. Please log in again."
+          : errorMsg.includes("500")
+          ? "Server error. Please try again later."
+          : errorMsg,
+      });
     } finally {
       setSaving(false);
     }
   };
 
   const updateHandle = async () => {
-    if (!newHandle || newHandle === profile?.handle) return;
+    if (!newHandle?.trim()) {
+      notify({
+        title: "Invalid handle",
+        message: "Please enter a valid handle",
+      });
+      return;
+    }
+    if (newHandle === profile?.handle) {
+      notify({ title: "No change", message: "Handle is the same" });
+      return;
+    }
+    // Basic validation
+    if (!/^[a-zA-Z0-9_-]+$/.test(newHandle)) {
+      notify({
+        title: "Invalid handle",
+        message:
+          "Handle can only contain letters, numbers, underscores, and hyphens",
+      });
+      return;
+    }
     setSavingHandle(true);
     try {
-      await api.profile.updateHandle({ handle: newHandle });
-      setProfile((prev) => ({ ...prev, handle: newHandle }));
-      notify({ title: "Handle updated", message: `New handle: ${newHandle}` });
+      const result = await api.profile.updateHandle({ handle: newHandle });
+      const updatedProfile = { ...profile, handle: newHandle };
+      setProfile(updatedProfile);
+      setUser(updatedProfile);
+      notify({
+        title: "Handle updated!",
+        message: `Your new handle: @${newHandle}`,
+      });
     } catch (err) {
-      notify({ title: "Handle update failed", message: err.message });
+      const errorMsg = err.message || "Unknown error";
+      notify({
+        title: "Handle update failed",
+        message:
+          errorMsg.includes("409") || errorMsg.includes("taken")
+            ? "This handle is already taken. Try another one."
+            : errorMsg,
+      });
     } finally {
       setSavingHandle(false);
     }

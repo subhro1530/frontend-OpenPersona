@@ -259,18 +259,65 @@ const OverviewPage = () => {
     load();
   }, []);
 
-  // Mock activity data
-  const activities = [
-    { icon: "📊", text: "Dashboard created: hire-me", time: "2 hours ago" },
-    { icon: "📄", text: "Resume analyzed successfully", time: "4 hours ago" },
-    {
-      icon: "🎨",
-      text: "Template changed to Neon Portfolio",
-      time: "Yesterday",
-    },
-    { icon: "💾", text: "Portfolio draft saved", time: "Yesterday" },
-    { icon: "🚀", text: "Portfolio published", time: "2 days ago" },
-  ];
+  // Dynamic activity based on actual data
+  const generateActivities = () => {
+    const items = [];
+    if (dashboards.length > 0) {
+      const latest = dashboards[0];
+      items.push({
+        icon: "📊",
+        text: `Dashboard active: ${latest.title || latest.slug}`,
+        time: "Active",
+      });
+    }
+    if (stats.files > 0) {
+      items.push({
+        icon: "📄",
+        text: `${stats.files} file${stats.files > 1 ? "s" : ""} uploaded`,
+        time: "Ready",
+      });
+    }
+    if (highlights?.talkingPoints?.length > 0) {
+      items.push({
+        icon: "✨",
+        text: `${highlights.talkingPoints.length} AI insights available`,
+        time: "New",
+      });
+    }
+    if (user?.handle) {
+      items.push({
+        icon: "🔗",
+        text: `Public profile: @${user.handle}`,
+        time: "Live",
+      });
+    }
+    if (portfolioStatus?.readiness) {
+      items.push({
+        icon: readinessInfo.score >= 70 ? "🚀" : "📝",
+        text: `Portfolio readiness: ${readinessInfo.score}%`,
+        time: readinessInfo.status,
+      });
+    }
+    // Add some helpful prompts if empty
+    if (items.length === 0) {
+      items.push(
+        {
+          icon: "👋",
+          text: "Welcome! Start by completing your profile",
+          time: "Get started",
+        },
+        {
+          icon: "📊",
+          text: "Create your first dashboard to showcase work",
+          time: "Recommended",
+        },
+        { icon: "📄", text: "Upload a resume for AI analysis", time: "Try it" }
+      );
+    }
+    return items;
+  };
+
+  const activities = generateActivities();
 
   const quickActions = [
     {
