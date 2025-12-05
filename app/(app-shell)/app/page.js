@@ -13,6 +13,7 @@ import {
   getHighlightDetail,
 } from "@/lib/highlight-utils";
 import { interpretReadiness, describeMissing } from "@/lib/readiness-utils";
+import { normalizeDashboardsPayload } from "@/lib/dashboard-utils";
 import useAppStore from "@/store/useAppStore";
 
 /* ─────────────────────────────────────────────────────────── */
@@ -233,7 +234,8 @@ const OverviewPage = () => {
           api.files.list().catch(() => []),
         ]);
 
-        setDashboards(dashes || []);
+        const normalizedDashboards = normalizeDashboardsPayload(dashes);
+        setDashboards(normalizedDashboards);
         const sanitizedHighlights = sanitizeHighlightsPayload(hl);
         setHighlights(sanitizedHighlights);
         setHighlightsError(
@@ -243,7 +245,7 @@ const OverviewPage = () => {
         );
         setPortfolioStatus(status);
         setStats({
-          dashboards: dashes?.length || 0,
+          dashboards: normalizedDashboards.length,
           sections: blueprint?.sections?.length || 0,
           insights: sanitizedHighlights?.talkingPoints?.length || 0,
           files: files?.length || 0,

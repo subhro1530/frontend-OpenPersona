@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { clearAuthToken } from "@/lib/api-client";
 import { subscribeUnauthorized } from "@/lib/auth-events";
+import { normalizeDashboardsPayload } from "@/lib/dashboard-utils";
 
 let unauthorizedSubscribed = false;
 
@@ -56,7 +57,8 @@ export const useAppStore = create(
       },
 
       // Data actions
-      setDashboards: (dashboards) => set({ dashboards }),
+      setDashboards: (dashboards) =>
+        set({ dashboards: normalizeDashboardsPayload(dashboards) }),
       addDashboard: (dashboard) =>
         set((state) => ({ dashboards: [...state.dashboards, dashboard] })),
       updateDashboard: (id, updates) =>

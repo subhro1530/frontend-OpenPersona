@@ -9,6 +9,7 @@ import Tag from "@/components/ui/Tag";
 import api from "@/lib/api-client";
 import { useToast } from "@/components/ui/ToastProvider";
 import useAppStore from "@/store/useAppStore";
+import { normalizeDashboardsPayload } from "@/lib/dashboard-utils";
 
 /* ─────────────────────────────────────────────────────────── */
 /* Dashboard card                                               */
@@ -324,12 +325,14 @@ const DashboardManager = () => {
   const plan = useAppStore((s) => s.plan);
   const canCreate = useAppStore((s) => s.canCreateDashboard);
   const { notify } = useToast();
+  const safeDashboards = normalizeDashboardsPayload(dashboards);
 
   const load = async () => {
     try {
       const data = await api.dashboards.list();
-      setDashboards(data || []);
-      setStoreDashboards(data || []);
+      const normalized = normalizeDashboardsPayload(data);
+      setDashboards(normalized);
+      setStoreDashboards(normalized);
     } catch (err) {
       notify({ title: "Dashboard fetch failed", message: err.message });
     } finally {
@@ -373,7 +376,7 @@ const DashboardManager = () => {
         actions={
           <div className="flex items-center gap-4">
             <span className="text-sm text-white/50">
-              {dashboards.length} / {planLimit()}
+              {safeDashboards.length} / {planLimit()}
             </span>
             <NeonButton onClick={() => openEditor()} disabled={!canCreate()}>
               New Dashboard
@@ -390,7 +393,7 @@ const DashboardManager = () => {
             className="h-8 w-8 rounded-full border-2 border-cyber border-t-transparent"
           />
         </div>
-      ) : dashboards.length === 0 ? (
+      ) : safeDashboards.length === 0 ? (
         <GlowCard className="py-16 text-center">
           <p className="text-white/60">
             No dashboards yet. Create your first one to get started.
@@ -402,7 +405,7 @@ const DashboardManager = () => {
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           <AnimatePresence>
-            {dashboards.map((dash) => (
+            {safeDashboards.map((dash) => (
               <DashboardCard
                 key={dash.id}
                 dashboard={dash}
